@@ -6,8 +6,10 @@ import java.io.Reader;
 import java.io.Writer;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.Enumeration;
 import java.util.Hashtable;
 import java.util.Random;
+import java.util.Vector;
 import javax.microedition.io.Connector;
 import javax.microedition.io.HttpConnection;
 import javax.microedition.lcdui.Alert;
@@ -25,6 +27,7 @@ import javax.microedition.lcdui.Spacer;
 import javax.microedition.lcdui.TextBox;
 import javax.microedition.lcdui.TextField;
 import javax.microedition.lcdui.Ticker;
+import javax.microedition.lcdui.game.Sprite;
 import javax.microedition.media.Manager;
 import javax.microedition.media.MediaException;
 import javax.microedition.media.Player;
@@ -32,19 +35,25 @@ import javax.microedition.rms.RecordStore;
 import javax.microedition.rms.RecordStoreException;
 
 public class STD extends Canvas {
-    
+
     public static Random RNG;
     public static Image I;
     public static Autorun T;
     public static Graphics G;
     public static int KC;
     public static int KP;
-    
+
+    private static Image offScreenImage;
+    private static Graphics offScreenGc;
+
     public static int W;
     public static int H;
-    
+
     public boolean bPressed;
-    
+
+    public static java.util.Hashtable gelHashtable = new java.util.Hashtable();
+    private static SprHashtable spriteHashtable = new SprHashtable();
+
     public static Player P;
     public static final float E = 2.7182817f;
     public static final float PI = 3.1415927f;
@@ -54,7 +63,7 @@ public class STD extends Canvas {
     private static final AlertType[] alertTypes;
     private static Hashtable bodies;
     private static Random rnd;
-    
+
     public static final int GAME_UP = 0x0001;
     public static final int GAME_DOWN = 0x0002;
     public static final int GAME_LEFT = 0x0004;
@@ -65,27 +74,38 @@ public class STD extends Canvas {
     public static final int GAME_C = 0x0080;
     public static final int GAME_D = 0x0100;
     public static int gameActionBits = 0;
-    
+
     public static float NaNf = Float.NaN;
-    
+
     public STD() {
         super();
         setFullScreenMode(true);
         bPressed = false;
         W = getWidth();
         H = getHeight();
+        offScreenImage = Image.createImage(W, H);
+        offScreenGc = offScreenImage.getGraphics();
     }
-    
+
     public void sizeChanged(int w, int h) {
         W = w;
         H = h;
         repaint();
     }
-    
+
     public void paint(Graphics g) {
-        g.drawImage(I, 0, 0, 20);
+        // g.drawImage(I, 0, 0, 20);  
+        offScreenGc.drawImage(I, 0, 0, 20);
+        g.drawImage(offScreenImage, 0, 0, Graphics.TOP | Graphics.LEFT);
+        Enumeration spriteEnumeration = spriteHashtable.elements();
+
+        while (spriteEnumeration.hasMoreElements()) {
+            ((Sprite) spriteEnumeration.nextElement()).paint(offScreenGc);
+        }
+
+        g.drawImage(offScreenImage, 0, 0, Graphics.TOP | Graphics.LEFT);
     }
-    
+
     public void keyPressed(int keyCode) {
         KP = KC = keyCode;
         bPressed = true;
@@ -122,13 +142,13 @@ public class STD extends Canvas {
                 this.gameActionBits = 256;
         }
     }
-    
+
     public void keyReleased(int keyCode) {
         KP = 0;
         bPressed = false;
         gameActionBits = 0;
     }
-    
+
     public static boolean equals(Object o1, Object o2) {
         if (o1 == null) {
             return o2 == null;
@@ -138,70 +158,129 @@ public class STD extends Canvas {
         }
         return o1.equals(o2);
     }
-    
+
     public static void _CLS() {
         int prev = G.getColor();
         G.setColor(255, 255, 255);
         _fillRect(0, 0, _getWidth(), _getHeight());
         G.setColor(prev);
     }
-    
+
     public static int _Up() {
         return (gameActionBits & GAME_UP);
-    }    
-    
+    }
+
     public static int _Down() {
         return (gameActionBits & GAME_DOWN);
     }
-    
+
     public static int _Left() {
         return (gameActionBits & GAME_LEFT);
     }
-    
+
     public static int _Right() {
         return (gameActionBits & GAME_RIGHT);
     }
-    
+
     public static int _Fire() {
         return (gameActionBits & GAME_FIRE);
     }
-    
+
     public static int _GameA() {
         return (gameActionBits & GAME_A);
     }
-    
+
     public static int _GameB() {
         return (gameActionBits & GAME_B);
     }
-    
+
     public static int _GameC() {
         return (gameActionBits & GAME_C);
     }
-    
+
     public static int _GameD() {
         return (gameActionBits & GAME_D);
     }
-    
+
     public static int _INKEY() {
         return KP;
     }
+
+    public static int _rand(int min, int max) {
+        _randomize();
+        return min + ((rnd.nextInt() >>> 1) % (max - min));
+    }
     
+    public static void _DelSprite(String key) {
+        spriteHashtable.remove(key);
+    }
+
+    public static void _GelLoad(String var1, String var2) {
+        Image var3 = null;
+        try {
+            if (!var2.startsWith("file:")) {
+                var3 = Image.createImage("/" + var2);
+            }
+            gelHashtable.put(var1, var3);
+        } catch (IOException ex) {
+        }
+    }
+
+    public static void _DrawGel(String nameGel, int x, int y) {
+        Image img = (Image) gelHashtable.get(nameGel);
+        if (img != null) {
+            G.drawImage(img, x, y, 20);
+        }
+    }
+
+    public static void _SpriteGEL(String nameSpr, String nameGel) {
+        Image img;
+        if ((img = (Image) gelHashtable.get(nameGel)) != null) {
+            spriteHashtable.put(nameSpr, new Sprite(img));
+        } else {
+            // throw new Exception(256, "Invalid GEL");
+        }
+    }
+
+    public static void _SpriteMove(String var1, int var2, int var3) {
+        Sprite var4;
+        if ((var4 = (Sprite) spriteHashtable.get(var1)) != null) {
+            var4.setPosition(var2, var3);
+            //  ((Sprite) var4).paint(offScreenGc);
+        } else {
+            //throw new BasicError(257, "Invalid Sprite");
+        }
+    }
+
+    public static int _SpriteHit(String name1, String name2) {
+        Sprite spr1 = ((Sprite) spriteHashtable.get(name1));
+        Sprite spr2 = ((Sprite) spriteHashtable.get(name2));
+        if (spr1 != null && spr2 != null) {
+            byte result = 0;
+            if (spr1.collidesWith(spr2, true)) {
+                result = 1;
+            }
+            return result;
+        }
+        return 0;
+    }
+
     public static void _drawArc(int x, int y, int w, int h, int start, int end) {
         G.drawArc(x, y, w, h, start, end);
     }
-    
+
     public static void _drawEllipse(int x, int y, int w, int h) {
         G.drawArc(x, y, w, h, 0, 360);
     }
-    
+
     public static void _drawImage(Image i, int x, int y) {
         G.drawImage(i, x, y, 20);
     }
-    
+
     public static void _drawLine(int x1, int y1, int x2, int y2) {
         G.drawLine(x1, y1, x2, y2);
     }
-    
+
     public static void _setFont(int face, int style, int size) {
         try {
             G.setFont(Font.getFont(face, style, size));
@@ -209,7 +288,7 @@ public class STD extends Canvas {
             G.setFont(Font.getDefaultFont());
         }
     }
-    
+
     public static void _setColor(int red, int green, int blue) {
         if (red < 0 || red > 255 || green < 0 || green > 255 || blue < 0 || blue > 255) {
             return;
@@ -220,7 +299,7 @@ public class STD extends Canvas {
             t.printStackTrace();
         }
     }
-    
+
     public static void _setColor(int RGB) {
         try {
             G.setColor(RGB);
@@ -228,97 +307,97 @@ public class STD extends Canvas {
             t.printStackTrace();
         }
     }
-    
+
     public static void _setClip(int x, int y, int width, int height) {
         G.setClip(x, y, width, height);
     }
-    
+
     public static int _getColorRed() {
         return G.getRedComponent();
     }
-    
+
     public static int _getColorGreen() {
         return G.getGreenComponent();
     }
-    
+
     public static int _getColorBlue() {
         return G.getBlueComponent();
     }
-    
+
     public static void _fillTriangle(int x1, int y1, int x2, int y2, int x3, int y3) {
         G.fillTriangle(x1, y1, x2, y2, x3, y3);
     }
-    
+
     public static void _fillRoundRect(int x, int y, int width, int height, int arcWidth, int arcHeight) {
         G.fillRoundRect(x, y, width, height, arcWidth, arcHeight);
     }
-    
+
     public static void _fillRect(int x, int y, int width, int height) {
         G.fillRect(x, y, width, height);
     }
-    
+
     public static void _fillArc(int x, int y, int width, int height, int startAngle, int arcAngle) {
         G.fillArc(x, y, width, height, startAngle, arcAngle);
     }
-    
+
     public static void _fillEllipse(int x, int y, int width, int height) {
         G.fillArc(x, y, width, height, 0, 360);
     }
-    
+
     public static void _drawText(String str, int x, int y) {
         G.drawString(str, x, y, 20);
     }
-    
+
     public static void _drawRoundRect(int x, int y, int width, int height, int arcWidth, int arcHeight) {
         G.drawRoundRect(x, y, width, height, arcWidth, arcHeight);
     }
-    
+
     public static void _drawRect(int x, int y, int width, int height) {
         G.drawRect(x, y, width, height);
     }
-    
+
     public static void _drawChar(char character, int x, int y, int anchor) {
         G.drawChar(character, x, y, anchor);
     }
-    
+
     public static int _getColorsNum() {
         return FW.fw.display.numColors();
     }
-    
+
     public static int _getHeight() {
         return T.getHeight();
     }
-    
+
     public static int _getWidth() {
         return T.getWidth();
     }
-    
+
     public static int _getImageHeight(Image im) {
         if (im == null) {
             return -1;
         }
         return im.getHeight();
     }
-    
+
     public static int _getImageWidth(Image im) {
         if (im == null) {
             return -1;
         }
         return im.getWidth();
     }
-    
+
     public static int _getStringHeight(String s) {
         return G.getFont().getHeight();
     }
-    
+
     public static int _getStringWidth(String s) {
         return G.getFont().stringWidth(s);
     }
-    
+
     public static boolean _isColorDisplay() {
         return FW.fw.display.isColor();
     }
-    
+
     public static Image _loadImage(String url) {
         try {
             return Image.createImage(url);
@@ -326,35 +405,35 @@ public class STD extends Canvas {
         }
         return null;
     }
-    
+
     public static void _plot(int x, int y) {
         G.drawLine(x, y, x, y);
     }
-    
+
     public static void _repaint() {
         T.repaint();
         T.serviceRepaints();
     }
-    
+
     public static void _setDefaultFont() {
         G.setFont(Font.getDefaultFont());
     }
-    
+
     public static int _getKeyClicked() {
         return T.KP;
     }
-    
+
     public static int _getKeyPressed() {
         if (T.bPressed) {
             return T.KP;
         }
         return 0;
     }
-    
+
     public static int _keyToAction(int key) {
         return T.getGameAction(key);
     }
-    
+
     public static void _delay(int time) {
         try {
             Thread.sleep((long) time);
@@ -362,43 +441,43 @@ public class STD extends Canvas {
             t.printStackTrace();
         }
     }
-    
+
     public static int _getCurrentTime() {
         return (int) (System.currentTimeMillis() / 1000);
     }
-    
+
     public static int _getDay(int time) {
         return getCalendar(time).get(5);
     }
-    
+
     public static int _getHour(int time) {
         return getCalendar(time).get(11);
     }
-    
+
     public static int _getMinute(int time) {
         return getCalendar(time).get(12);
     }
-    
+
     public static int _getMonth(int time) {
         return getCalendar(time).get(2) + 1;
     }
-    
+
     public static int _getRelativeTimeMs() {
         return (int) System.currentTimeMillis();
     }
-    
+
     public static int _getSecond(int time) {
         return getCalendar(time).get(13);
     }
-    
+
     public static int _getWeekDay(int time) {
         return getCalendar(time).get(7) + 1;
     }
-    
+
     public static int _getYear(int time) {
         return getCalendar(time).get(1);
     }
-    
+
     public static int _getYearDay(int time) {
         Calendar cal = getCalendar(time);
         int fm = 28;
@@ -415,7 +494,7 @@ public class STD extends Canvas {
         }
         return yearDay + cal.get(5);
     }
-    
+
     private static Calendar getCalendar(int time) {
         long millis = (long) time * 1000;
         Calendar cal = Calendar.getInstance();
@@ -423,19 +502,19 @@ public class STD extends Canvas {
         cal.setTime(dt);
         return cal;
     }
-    
+
     public static float _sin(float i) {
         return (float) Math.sin((double) i);
     }
-    
+
     public static float _cos(float i) {
         return (float) Math.cos((double) i);
     }
-    
+
     public static float _tan(float a) {
         return (float) Math.tan((double) a);
     }
-    
+
     public static float _asin(float x) {
         if ((double) x < -1.0 || (double) x > 1.0) {
             return NaNf;
@@ -448,7 +527,7 @@ public class STD extends Canvas {
         }
         return _atan(x / (float) Math.sqrt((double) (1.0f - x * x)));
     }
-    
+
     public static float _acos(float x) {
         float f = _asin(x);
         if (f == NaNf) {
@@ -456,7 +535,7 @@ public class STD extends Canvas {
         }
         return 1.5707964f - f;
     }
-    
+
     public static float _atan(float x) {
         boolean signChange = false;
         boolean Invert = false;
@@ -493,7 +572,7 @@ public class STD extends Canvas {
         }
         return a;
     }
-    
+
     public static float _atan2(float y, float x) {
         if ((double) y == 0.0 && (double) x == 0.0) {
             return 0.0f;
@@ -512,15 +591,15 @@ public class STD extends Canvas {
         }
         return 1.5707964f;
     }
-    
+
     public static float _toRadians(float angdeg) {
         return angdeg / 180.0f * 3.1415927f;
     }
-    
+
     public static float _toDegrees(float angrad) {
         return angrad * 180.0f / 3.1415927f;
     }
-    
+
     public static float _exp(float x) {
         if ((double) x == 0.0) {
             return 1.0f;
@@ -542,7 +621,7 @@ public class STD extends Canvas {
         }
         return f;
     }
-    
+
     public static float _log(float x) {
         if ((double) x <= 0.0) {
             return NaNf;
@@ -556,15 +635,15 @@ public class STD extends Canvas {
         }
         return log(x);
     }
-    
+
     public static float _sqrt(float num) {
         return (float) Math.sqrt((double) num);
     }
-    
+
     public static float _log10(float x) {
         return _log(x) / 2.3025851f;
     }
-    
+
     public static float _pow(float x, float y) {
         if ((double) y == 0.0) {
             return 1.0f;
@@ -600,20 +679,20 @@ public class STD extends Canvas {
         }
         return NaNf;
     }
-    
+
     public static int _trunc(float a) {
         return (int) a;
     }
-    
+
     public static float _frac(float a) {
         int i = (int) a;
         return _rabs(a - (float) i);
     }
-    
+
     public static float _rabs(float a) {
         return Math.abs(a);
     }
-    
+
     private static float log(float x) {
         if ((double) x <= 0.0) {
             return NaNf;
@@ -645,7 +724,7 @@ public class STD extends Canvas {
         }
         return f;
     }
-    
+
     public static String _copy(String s, int idx1, int idx2) {
         if (idx1 < 0) {
             idx1 = 0;
@@ -661,7 +740,7 @@ public class STD extends Canvas {
         }
         return s.substring(idx1, idx2);
     }
-    
+
     public static char _getChar(String s, int idx) {
         if (idx < 0) {
             idx = s.length() + idx;
@@ -671,23 +750,23 @@ public class STD extends Canvas {
         }
         return s.charAt(idx);
     }
-    
+
     public static String _integerToString(int i) {
         return String.valueOf(i);
     }
-    
+
     public static int _length(String s) {
         return s.length();
     }
-    
+
     public static String _locase(String s) {
         return toLowerCase(s);
     }
-    
+
     public static int _pos(String s1, String s2) {
         return s1.indexOf(s2);
     }
-    
+
     public static String _setChar(String str, char c, int pos) {
         if (pos < 0) {
             pos = str.length() + pos;
@@ -699,7 +778,7 @@ public class STD extends Canvas {
         sb.setCharAt(pos, c);
         return sb.toString();
     }
-    
+
     public static int _stringToInteger(String s, int base) {
         try {
             return Integer.parseInt(s, base);
@@ -707,7 +786,7 @@ public class STD extends Canvas {
         }
         return 0;
     }
-    
+
     public static int _stringToInteger(String s) {
         try {
             return Integer.parseInt(s);
@@ -715,7 +794,7 @@ public class STD extends Canvas {
         }
         return 0;
     }
-    
+
     public static float _stringToReal(String s) {
         try {
             return Float.parseFloat(s);
@@ -723,11 +802,11 @@ public class STD extends Canvas {
         }
         return 0.0f;
     }
-    
+
     public static String _upcase(String s) {
         return toUpperCase(s);
     }
-    
+
     public static String toLowerCase(String s) {
         StringBuffer sb = new StringBuffer();
         int i = 0;
@@ -736,7 +815,7 @@ public class STD extends Canvas {
         }
         return sb.toString();
     }
-    
+
     public static char toLowerCase(char c) {
         c = Character.toLowerCase(c);
         if (c >= 0x410 && c <= 0x42f) {
@@ -747,7 +826,7 @@ public class STD extends Canvas {
         }
         return c;
     }
-    
+
     public static char toUpperCase(char c) {
         c = Character.toUpperCase(c);
         if (c >= 0x430 && c <= 0x44f) {
@@ -758,7 +837,7 @@ public class STD extends Canvas {
         }
         return c;
     }
-    
+
     public static String toUpperCase(String s) {
         StringBuffer sb = new StringBuffer();
         int i = 0;
@@ -767,12 +846,12 @@ public class STD extends Canvas {
         }
         return sb.toString();
     }
-    
+
     public static void _addCommand(Command cmd) {
         FW.CD.addCommand(cmd);
         FW.LC = null;
     }
-    
+
     public static int _choiceAppendString(int id, String str) {
         if (id < 0 || id > FW.F.size()) {
             return -1;
@@ -785,7 +864,7 @@ public class STD extends Canvas {
         FW.LC = null;
         return cg.append(str, null);
     }
-    
+
     public static int _choiceAppendStringImage(int id, String str, Image im) {
         if (id < 0 || id > FW.F.size()) {
             return -1;
@@ -798,7 +877,7 @@ public class STD extends Canvas {
         FW.LC = null;
         return cg.append(str, im);
     }
-    
+
     public static int _choiceGetSelectedIndex(int id) {
         if (id < 0 || id > FW.F.size()) {
             return -1;
@@ -811,7 +890,7 @@ public class STD extends Canvas {
         FW.LC = null;
         return cg.getSelectedIndex();
     }
-    
+
     public static boolean _choiceIsSelected(int id, int itemId) {
         if (id < 0 || id > FW.F.size()) {
             return false;
@@ -824,55 +903,55 @@ public class STD extends Canvas {
         FW.LC = null;
         return cg.isSelected(itemId);
     }
-    
+
     public static void _clearForm() {
         FW.F.deleteAll();
         FW.LC = null;
     }
-    
+
     public static Command _createCommand(String label, int type, int priority) {
         FW.LC = null;
         return new Command(label, type, priority);
     }
-    
+
     public static Command _emptyCommand() {
         return null;
     }
-    
+
     public static Command _selectCommand() {
         return List.SELECT_COMMAND;
     }
-    
+
     public static int _formAddChoice(String label, int type) {
         FW.LC = null;
         return FW.F.append(new ChoiceGroup(label, type));
     }
-    
+
     public static int _formAddGauge(String label, boolean interactive, int max, int init) {
         FW.LC = null;
         return FW.F.append(new Gauge(label, interactive, max, init));
     }
-    
+
     public static int _formAddImage(Image i) {
         FW.LC = null;
         return FW.F.append(i);
     }
-    
+
     public static int _formAddSpace() {
         FW.LC = null;
         return FW.F.append(new Spacer(FW.F.getWidth(), 10));
     }
-    
+
     public static int _formAddString(String label) {
         FW.LC = null;
         return FW.F.append(label);
     }
-    
+
     public static int _formAddTextField(String label, String init, int max, int type) {
         FW.LC = null;
         return FW.F.append(new TextField(label, init, max, type));
     }
-    
+
     public static String _formGetText(int id) {
         FW.LC = null;
         if (id < 0 || id > FW.F.size()) {
@@ -885,7 +964,7 @@ public class STD extends Canvas {
         TextField tf = (TextField) item;
         return tf.getString();
     }
-    
+
     public static int _formGetValue(int id) {
         FW.LC = null;
         if (id < 0 || id > FW.F.size()) {
@@ -898,7 +977,7 @@ public class STD extends Canvas {
         Gauge gauge = (Gauge) item;
         return gauge.getValue();
     }
-    
+
     public static void _formRemove(int id) {
         FW.LC = null;
         if (id < 0 || id > FW.F.size()) {
@@ -906,7 +985,7 @@ public class STD extends Canvas {
         }
         FW.F.delete(id);
     }
-    
+
     public static void _formSetText(int id, String text) {
         FW.LC = null;
         if (id < 0 || id > FW.F.size()) {
@@ -919,7 +998,7 @@ public class STD extends Canvas {
         TextField tf = (TextField) item;
         tf.setString(text);
     }
-    
+
     public static void _formSetValue(int id, int value) {
         FW.LC = null;
         if (id < 0 || id > FW.F.size()) {
@@ -932,11 +1011,11 @@ public class STD extends Canvas {
         Gauge gauge = (Gauge) item;
         gauge.setValue(value);
     }
-    
+
     public static Command _getClickedCommand() {
         return FW.LC;
     }
-    
+
     public static String _getTextBoxString() {
         FW.LC = null;
         if (FW.TB == null) {
@@ -944,7 +1023,7 @@ public class STD extends Canvas {
         }
         return FW.TB.getString();
     }
-    
+
     public static int _menuAppendString(String s) {
         FW.LC = null;
         if (FW.L == null) {
@@ -952,7 +1031,7 @@ public class STD extends Canvas {
         }
         return FW.L.append(s, null);
     }
-    
+
     public static int _menuAppendStringImage(String s, Image i) {
         FW.LC = null;
         if (FW.L == null) {
@@ -960,7 +1039,7 @@ public class STD extends Canvas {
         }
         return FW.L.append(s, i);
     }
-    
+
     public static int _menuGetSelectedIndex() {
         FW.LC = null;
         if (FW.L == null) {
@@ -968,7 +1047,7 @@ public class STD extends Canvas {
         }
         return FW.L.getSelectedIndex();
     }
-    
+
     public static boolean _menuIsSelected(int id) {
         FW.LC = null;
         if (FW.L == null) {
@@ -976,7 +1055,7 @@ public class STD extends Canvas {
         }
         return FW.L.isSelected(id);
     }
-    
+
     public static void _playAlertSound() {
         FW.LC = null;
         if (FW.A == null) {
@@ -988,22 +1067,22 @@ public class STD extends Canvas {
         }
         at.playSound(FW.fw.display);
     }
-    
+
     public static void _removeCommand(Command c) {
         FW.LC = null;
         FW.F.removeCommand(c);
     }
-    
+
     public static void _setTicker(String label) {
         FW.LC = null;
         FW.F.setTicker(new Ticker(label));
     }
-    
+
     public static void _formSetTitle(String title) {
         FW.LC = null;
         FW.F.setTitle(title);
     }
-    
+
     public static void _showAlert(String title, String message, Image img, int type) {
         AlertType at;
         FW.LC = null;
@@ -1017,19 +1096,19 @@ public class STD extends Canvas {
         FW.fw.display.setCurrent(FW.A);
         FW.CD = FW.A;
     }
-    
+
     public static void _showCanvas() {
         FW.LC = null;
         FW.fw.display.setCurrent(T);
         FW.CD = T;
     }
-    
+
     public static void _showForm() {
         FW.LC = null;
         FW.fw.display.setCurrent(FW.F);
         FW.CD = FW.F;
     }
-    
+
     public static void _showMenu(String title, int type) {
         FW.LC = null;
         FW.L = new List(title, type);
@@ -1037,7 +1116,7 @@ public class STD extends Canvas {
         FW.fw.display.setCurrent(FW.L);
         FW.CD = FW.L;
     }
-    
+
     public static void _showTextBox(String title, String init, int max, int type) {
         FW.LC = null;
         FW.TB = new TextBox(title, init, max, type);
@@ -1045,7 +1124,7 @@ public class STD extends Canvas {
         FW.fw.display.setCurrent(FW.TB);
         FW.CD = FW.TB;
     }
-    
+
     public static int _addRecordStoreEntry(RecordStore rs, String data) {
         try {
             return rs.addRecord(data.getBytes(), 0, data.getBytes().length);
@@ -1053,7 +1132,7 @@ public class STD extends Canvas {
         }
         return -1;
     }
-    
+
     public static void _closeRecordStore(RecordStore rs) {
         try {
             rs.closeRecordStore();
@@ -1061,7 +1140,7 @@ public class STD extends Canvas {
             ex.printStackTrace();
         }
     }
-    
+
     public static void _deleteRecordStore(String name) {
         try {
             RecordStore.deleteRecordStore(name);
@@ -1069,7 +1148,7 @@ public class STD extends Canvas {
             ex.printStackTrace();
         }
     }
-    
+
     public static void _deleteRecordStoreEntry(RecordStore rs, int i) {
         try {
             rs.deleteRecord(i);
@@ -1077,7 +1156,7 @@ public class STD extends Canvas {
             ex.printStackTrace();
         }
     }
-    
+
     public static int _getRecordStoreSize(RecordStore rs) {
         try {
             return rs.getNumRecords();
@@ -1085,7 +1164,7 @@ public class STD extends Canvas {
         }
         return 0;
     }
-    
+
     public static RecordStore _openRecordStore(String name) {
         try {
             return RecordStore.openRecordStore(name, true);
@@ -1093,7 +1172,7 @@ public class STD extends Canvas {
         }
         return null;
     }
-    
+
     public static String _readRecordStoreEntry(RecordStore rs, int id) {
         try {
             return new String(rs.getRecord(id));
@@ -1101,25 +1180,25 @@ public class STD extends Canvas {
         }
         return "";
     }
-    
+
     public static void _addHttpBody(HttpConnection http, String body) {
         bodies.put(http, body);
     }
-    
+
     public static void _addHttpHeader(HttpConnection http, String name, String value) {
         try {
             http.setRequestProperty(name, value);
         } catch (Exception ex) {
         }
     }
-    
+
     public static void _closeHttp(HttpConnection http) {
         try {
             http.close();
         } catch (Exception ex) {
         }
     }
-    
+
     public static String _getHttpHeader(HttpConnection http, String name) {
         try {
             return http.getHeaderField(name);
@@ -1127,7 +1206,7 @@ public class STD extends Canvas {
         }
         return "";
     }
-    
+
     public static String _getHttpResponse(HttpConnection http) {
         try {
             Reader r = new InputStreamReader(http.openInputStream());
@@ -1143,7 +1222,7 @@ public class STD extends Canvas {
         }
         return "";
     }
-    
+
     public static boolean _isHttpOpen(HttpConnection http) {
         try {
             http.getLastModified();
@@ -1152,7 +1231,7 @@ public class STD extends Canvas {
         }
         return false;
     }
-    
+
     public static HttpConnection _openHttp(String url) {
         try {
             return (HttpConnection) Connector.open(url);
@@ -1160,7 +1239,7 @@ public class STD extends Canvas {
         }
         return null;
     }
-    
+
     public static int _sendHttpMessage(HttpConnection http) {
         try {
             String body = (String) bodies.get(http);
@@ -1176,21 +1255,21 @@ public class STD extends Canvas {
         }
         return -1;
     }
-    
+
     public static void _setHttpMethod(HttpConnection http, String method) {
         try {
             http.setRequestMethod(method);
         } catch (Exception ex) {
         }
     }
-    
+
     public static long _getPlayerDuration() {
         if (P == null) {
             return -1L;
         }
         return P.getDuration();
     }
-    
+
     public static boolean _openPlayer(String url, String mime) {
         try {
             InputStream is = T.getClass().getResourceAsStream(url);
@@ -1200,7 +1279,7 @@ public class STD extends Canvas {
         }
         return false;
     }
-    
+
     public static boolean _setLoopCount(int count) {
         if (P == null) {
             return false;
@@ -1208,7 +1287,7 @@ public class STD extends Canvas {
         P.setLoopCount(count);
         return true;
     }
-    
+
     public static boolean _startPlayer() {
         if (P == null) {
             return false;
@@ -1220,7 +1299,7 @@ public class STD extends Canvas {
         }
         return false;
     }
-    
+
     public static void _stopPlayer() {
         try {
             P.stop();
@@ -1228,7 +1307,7 @@ public class STD extends Canvas {
             return;
         }
     }
-    
+
     public static void _closeResource(InputStream is) {
         try {
             is.close();
@@ -1236,11 +1315,11 @@ public class STD extends Canvas {
             return;
         }
     }
-    
+
     public static InputStream _openResource(String url) {
         return T.getClass().getResourceAsStream(url);
     }
-    
+
     public static int _readByte(InputStream is) {
         try {
             return is.read();
@@ -1248,7 +1327,7 @@ public class STD extends Canvas {
         }
         return -1;
     }
-    
+
     public static String _readLine(InputStream is) {
         try {
             StringBuffer sb = new StringBuffer();
@@ -1267,15 +1346,15 @@ public class STD extends Canvas {
         }
         return "";
     }
-    
+
     public static boolean _resourceAvailable(InputStream is) {
         return is != null;
     }
-    
+
     public static char _chr(int ch) {
         return (char) ch;
     }
-    
+
     public static String _getProperty(String key) {
         String prop = System.getProperty(key);
         if (prop == null) {
@@ -1283,42 +1362,88 @@ public class STD extends Canvas {
         }
         return prop;
     }
-    
+
     public static void _halt() {
         FW.fw.destroyApp(true);
     }
-    
+
     public static int _isMidletPaused() {
         return FW.MP;
     }
-    
+
     public static boolean _isBoolPaused() {
         return FW.MP < 0;
     }
-    
+
     public static boolean _odd(int i) {
         return i % 2 == 1;
     }
-    
+
     public static int _ord(char i) {
         return i;
     }
-    
+
     public static int _random(int n) {
         return rnd.nextInt(n);
     }
-    
+
     public static void _randomize() {
         rnd = RNG = new Random();
     }
-    
+
     void run() {
     }
-    
+
     static {
         alertTypes = new AlertType[]{AlertType.INFO, AlertType.WARNING, AlertType.ERROR, AlertType.ALARM, AlertType.CONFIRMATION};
         bodies = new Hashtable();
         rnd = RNG = new Random();
     }
-    
+
+}
+
+class SprHashtable extends Vector {
+
+    private Vector key;
+
+    public SprHashtable() {
+        key = new Vector();
+    }
+
+    public void put(Object key, Object value) {
+        int id = this.key.indexOf(key);
+        if (id > -1) {
+            this.key.setElementAt(key, id);
+            setElementAt(value, id);
+            return;
+        }
+        this.key.addElement(key);
+        addElement(value);
+    }
+
+    public Object get(Object key) {
+        int id = this.key.indexOf(key);
+        if (id > -1) {
+            return elementAt(id);
+        }
+        return null;
+    }
+
+    public boolean remove(Object key) {
+        int id = this.key.indexOf(key);
+        if (id > -1) {
+            this.key.removeElementAt(id);
+            removeElementAt(id);
+        }
+        return true;
+    }
+
+    public void clear() {
+        key.removeAllElements();
+        removeAllElements();
+    }
+
+    public Enumeration keys() {
+        return key.elements();
+    }
 }
