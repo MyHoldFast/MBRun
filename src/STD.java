@@ -164,6 +164,8 @@ public class STD extends Canvas {
         G.setColor(255, 255, 255);
         _fillRect(0, 0, _getWidth(), _getHeight());
         G.setColor(prev);
+        xposText = 0;
+        yposText = 0;
     }
 
     public static int _Up() {
@@ -213,6 +215,86 @@ public class STD extends Canvas {
 
     public static void _DelSprite(String key) {
         spriteHashtable.remove(key);
+    }
+
+    public static void _DelGel(String key) {
+        gelHashtable.remove(key);
+    }
+
+    public static void _GelGrab(String name, int x, int y, int w, int h) {
+        Image image = Image.createImage(w, h);
+        Graphics gr = image.getGraphics();
+        gr.drawImage(I, -x, -y, 20);
+        gelHashtable.put(name, image);
+    }
+
+    public static int _GelWidth(String name) {
+        Image var2;
+        int var3;
+        if ((var2 = (Image) gelHashtable.get(name)) != null) {
+            var3 = var2.getWidth();
+        } else {
+            var3 = 0;
+        }
+
+        return var3;
+    }
+
+    public static int _GelHeight(String var1) {
+        Image var2;
+        int var3;
+        if ((var2 = (Image) gelHashtable.get(var1)) != null) {
+            var3 = var2.getHeight();
+        } else {
+            var3 = 0;
+        }
+
+        return var3;
+    }
+
+    public static void _ColorAlphaGel(String name, int a, int r1, int g1, int b1) {
+        Image img = (Image) gelHashtable.get(name);
+        if (img == null) {
+            return;
+        }
+        int color = (0xff << 24) | (r1 << 16) | (g1 << 8) | b1;
+        int w = img.getWidth();
+        int h = img.getHeight();
+        int length = w * h;
+        int[] rgbData = new int[length];
+        img.getRGB(rgbData, 0, w, 0, 0, w, h);
+        int pixel, r, g, b;
+        for (int k = 0; k < length; k++) {
+            pixel = rgbData[k];
+            if (pixel == color) {
+                r = (pixel >> 16) & 0xff;
+                g = (pixel >> 8) & 0xff;
+                b = pixel & 0xff;
+                rgbData[k] = (a << 24) | ((r << 16) | (g << 8) | b);
+            }
+        }
+        gelHashtable.put(name, Image.createRGBImage(rgbData, w, h, true));
+    }
+
+    public static void _AlphaGel(String name, int i) {
+        Image img = (Image) gelHashtable.get(name);
+        if (img == null) {
+            return;
+        }
+        int w = img.getWidth();
+        int h = img.getHeight();
+        int length = w * h;
+        int[] rgbData = new int[length];
+        img.getRGB(rgbData, 0, w, 0, 0, w, h);
+        int pixel, r, g, b;
+        for (int k = 0; k < length; k++) {
+            pixel = rgbData[k];
+            r = (pixel >> 16) & 0xff;
+            g = (pixel >> 8) & 0xff;
+            b = pixel & 0xff;
+            rgbData[k] = (i << 24) | ((r << 16) | (g << 8) | b);
+        }
+        gelHashtable.put(name, Image.createRGBImage(rgbData, w, h, true));
     }
 
     public static void _GelLoad(String var1, String var2) {
@@ -334,6 +416,80 @@ public class STD extends Canvas {
         }
     }
 
+    public static void _Blit(int var1, int var2, int var3, int var4, int var5, int var6) {
+        int var7 = G.getClipX();
+        int var8 = G.getClipY();
+        int var9 = G.getClipWidth();
+        int var10 = G.getClipHeight();
+        offScreenGc.drawImage(I, -var1, -var2, 20);
+        G.setClip(var5, var6, var3, var4);
+        G.drawImage(offScreenImage, var5, var6, 20);
+        G.setClip(var7, var8, var9, var10);
+    }
+
+    static int yposText = 0, xposText = 0, nlines = 0;
+
+    public static void _print(int integ) {
+        _print(integ + "");
+    }
+
+    public static void _print(double integ) {
+        _print(integ + "");
+    }
+
+    public static void _print(String string) {
+        string += "\n";
+        int heightInPixels = _getHeight();
+        int heightInChars = heightInPixels / G.getFont().getHeight();
+        int strlen = string.length();
+
+        int charWidth = G.getFont().charWidth('W');
+
+        for (int i = 0; i < strlen; ++i) {
+            char ch;
+            if ((ch = string.charAt(i)) == '\n' || xposText + charWidth > _getWidth()) {
+
+                xposText = 0;
+                yposText += G.getFont().getHeight();
+                if (yposText + G.getFont().getHeight() > heightInPixels) {
+
+                    nlines = 0;
+
+                    _Blit(0, G.getFont().getHeight(), _getWidth(), heightInPixels - G.getFont().getHeight(), 0, 0);
+                    yposText -= G.getFont().getHeight();
+                    ++nlines;
+                }
+            }
+
+            /*
+             * Clear line if at start of line
+             */
+            if (xposText == 0) {
+                G.setColor(0xffffff);
+                G.fillRect(0, yposText, _getWidth(), G.getFont().getHeight());
+                G.setColor(0);
+            }
+
+            /*
+             * Draw Character if not newline
+             */
+            if (ch != '\n') {
+                if (i == -1) {
+                    G.setColor(0);
+                    G.fillRect(xposText, yposText, charWidth, G.getFont().getHeight());
+                    G.setColor(0xffffff);
+                } else {
+                    G.setColor(0);
+                }
+
+                G.drawChar(ch, xposText + charWidth / 2, yposText, 17);
+                xposText += charWidth;
+            }
+        }
+
+        //return true;
+    }
+
     public static void _setColor(int red, int green, int blue) {
         if (red < 0 || red > 255 || green < 0 || green > 255 || blue < 0 || blue > 255) {
             return;
@@ -405,7 +561,7 @@ public class STD extends Canvas {
         G.drawChar(character, x, y, anchor);
     }
 
-    public static int _getColorsNum() {
+    public static int _getColorsNum(int bom) {
         return FW.fw.display.numColors();
     }
 
@@ -439,8 +595,8 @@ public class STD extends Canvas {
         return G.getFont().stringWidth(s);
     }
 
-    public static boolean _isColorDisplay() {
-        return FW.fw.display.isColor();
+    public static int _isColorDisplay(int bom) {
+        return (FW.fw.display.isColor()) ? 1 : 0;
     }
 
     public static Image _loadImage(String url) {
@@ -768,6 +924,18 @@ public class STD extends Canvas {
             f += -0.6931472f;
         }
         return f;
+    }
+
+    public static String _left(String s, int i) {
+        return s.substring(0, i);
+    }
+
+    public static String _right(String s, int i) {
+        return s.substring(s.length() - i);
+    }
+
+    public static String _mid(String s, int i, int i2) {
+        return s.substring(i - 1, i + i2 - 1);
     }
 
     public static String _copy(String s, int idx1, int idx2) {
