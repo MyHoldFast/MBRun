@@ -873,11 +873,11 @@ public class Autorun extends STD implements Runnable {
                     l = 1770;
                     continue;
                 case 1770:
-
+                    _setFont(1);
                     l = 1780;
                     continue;
                 case 1780:
-                    _drawText(sold + "", 212, 14);
+                    _drawText(_str(sold), 212, 14);
                     l = 1783;
                     continue;
                 case 1783:
@@ -1259,7 +1259,7 @@ public class Autorun extends STD implements Runnable {
                     l = 2100;
                     continue;
                 case 2100:
-                    if (_SpriteHit("s", "tl") == 1 && f == 1) {
+                    if (_SpriteHit("s", "tl") != 0 && f == 1) {
                         sold = sold + 1;
                         f = 0;
                         sx = -100;
@@ -1577,11 +1577,11 @@ public class Autorun extends STD implements Runnable {
                     l = 2745;
                     continue;
                 case 2745:
-                    _drawText(sold + "", 112, 117);
+                    _drawText(_str(sold), 112, 117);
                     l = 2746;
                     continue;
                 case 2746:
-                    _drawText(record + "", 112, 172);
+                    _drawText(_str(record), 112, 172);
                     l = 2750;
                     continue;
                 case 2750:

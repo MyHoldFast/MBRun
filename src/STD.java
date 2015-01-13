@@ -210,7 +210,7 @@ public class STD extends Canvas {
         _randomize();
         return min + ((rnd.nextInt() >>> 1) % (max - min));
     }
-    
+
     public static void _DelSprite(String key) {
         spriteHashtable.remove(key);
     }
@@ -224,6 +224,7 @@ public class STD extends Canvas {
             gelHashtable.put(var1, var3);
         } catch (IOException ex) {
         }
+        System.gc();
     }
 
     public static void _DrawGel(String nameGel, int x, int y) {
@@ -263,6 +264,50 @@ public class STD extends Canvas {
             return result;
         }
         return 0;
+    }
+
+    public static void _setFont(int fontSize) {
+        Font font;
+        /*
+         * FACE_ {MONOSPACE|PROPORTIONAL|SYSTEM}
+         * SIZE_ {SMALL|MEDIUM|LARGE}
+         * STYLE_ {BOLD|ITALIC|PLAIN|UNDERLINE}
+         */
+
+        //System.out.println("fontSize = " + fontSize);
+        switch (fontSize) {
+            case 1:
+                font = Font.getFont(Font.FACE_MONOSPACE,
+                        Font.STYLE_PLAIN,
+                        Font.SIZE_SMALL);
+                break;
+            case 2:
+            default:
+                font = Font.getFont(Font.FACE_MONOSPACE,
+                        Font.STYLE_PLAIN,
+                        Font.SIZE_MEDIUM);
+                break;
+            case 3:
+                font = Font.getFont(Font.FACE_MONOSPACE,
+                        Font.STYLE_PLAIN,
+                        Font.SIZE_LARGE);
+        }
+
+        int charWidth = font.charWidth('W');
+        int widthInPixels = _getWidth();
+        int widthInChars = widthInPixels / charWidth;
+        if (fontSize == 0 && widthInChars < 12) {
+            //System.out.println("Auto: Changing to SMALL Font");
+            font = Font.getFont(Font.FACE_MONOSPACE,
+                    Font.STYLE_PLAIN,
+                    Font.SIZE_SMALL);
+        }
+        G.setFont(font);
+        offScreenGc.setFont(font);
+    }
+
+    public static String _str(int obj) {
+        return String.valueOf(obj);
     }
 
     public static void _drawArc(int x, int y, int w, int h, int start, int end) {
