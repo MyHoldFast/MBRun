@@ -49,6 +49,9 @@ public class STD extends Canvas {
     public static int W;
     public static int H;
 
+    public static int PX = 0;
+    public static int PY = 0;
+
     public boolean bPressed;
 
     public static java.util.Hashtable gelHashtable = new java.util.Hashtable();
@@ -76,6 +79,9 @@ public class STD extends Canvas {
     public static int gameActionBits = 0;
 
     public static float NaNf = Float.NaN;
+    private static boolean pressed = false;
+    private static boolean hold = false;
+    private static boolean dragged = false;
 
     public STD() {
         super();
@@ -104,6 +110,62 @@ public class STD extends Canvas {
         }
 
         g.drawImage(offScreenImage, 0, 0, Graphics.TOP | Graphics.LEFT);
+    }
+
+    public static int _pointPressed(int i) {
+        if (pressed) {
+            pressed = false;
+            return 1;
+        } else {
+            return 0;
+        }
+    }
+
+    public static int _pointDragged(int i) {
+        if (dragged) {
+            return 1;
+        } else {
+            return 0;
+        }
+    }
+
+    public static int _pointHold(int i) {
+        if (hold) {
+            return 1;
+        } else {
+            return 0;
+        }
+    }
+
+    public static int _pointX(int i) {
+        return PX;
+    }
+
+    public static int _pointY(int i) {
+        return PY;
+    }
+
+    public void pointerPressed(int x, int y) {
+        pressed = true;
+        hold = true;
+        PX = x;
+        PY = y;
+    }    
+   
+
+    public void pointerDragged(int x, int y) {
+        pressed = false;
+        dragged = true;
+        hold = false;
+        PX = x;
+        PY = y;
+    }
+
+    public void pointerReleased(int x, int y) {
+        //pressed = true;
+        hold = false;
+        dragged = false;
+        
     }
 
     public void keyPressed(int keyCode) {
@@ -168,43 +230,43 @@ public class STD extends Canvas {
         yposText = 0;
     }
 
-    public static int _Up() {
+    public static int _Up(int i) {
         return (gameActionBits & GAME_UP);
     }
 
-    public static int _Down() {
+    public static int _Down(int i) {
         return (gameActionBits & GAME_DOWN);
     }
 
-    public static int _Left() {
+    public static int _Left(int i) {
         return (gameActionBits & GAME_LEFT);
     }
 
-    public static int _Right() {
+    public static int _Right(int i) {
         return (gameActionBits & GAME_RIGHT);
     }
 
-    public static int _Fire() {
+    public static int _Fire(int i) {
         return (gameActionBits & GAME_FIRE);
     }
 
-    public static int _GameA() {
+    public static int _GameA(int i) {
         return (gameActionBits & GAME_A);
     }
 
-    public static int _GameB() {
+    public static int _GameB(int i) {
         return (gameActionBits & GAME_B);
     }
 
-    public static int _GameC() {
+    public static int _GameC(int i) {
         return (gameActionBits & GAME_C);
     }
 
-    public static int _GameD() {
+    public static int _GameD(int i) {
         return (gameActionBits & GAME_D);
     }
 
-    public static int _INKEY() {
+    public static int _INKEY(int i) {
         return KP;
     }
 
@@ -389,6 +451,14 @@ public class STD extends Canvas {
     }
 
     public static String _str(int obj) {
+        return String.valueOf(obj);
+    }
+
+    public static String _str(double obj) {
+        return String.valueOf(obj);
+    }
+
+    public static String _str(float obj) {
         return String.valueOf(obj);
     }
 
