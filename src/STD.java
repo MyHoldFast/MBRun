@@ -224,7 +224,7 @@ public class STD extends Canvas {
     public static void _CLS() {
         int prev = G.getColor();
         G.setColor(255, 255, 255);
-        _fillRect(0, 0, _getWidth(), _getHeight());
+        _fillRect(0, 0, _getWidth(0), _getHeight(0));
         G.setColor(prev);
         xposText = 0;
         yposText = 0;
@@ -438,7 +438,7 @@ public class STD extends Canvas {
         }
 
         int charWidth = font.charWidth('W');
-        int widthInPixels = _getWidth();
+        int widthInPixels = _getWidth(0);
         int widthInChars = widthInPixels / charWidth;
         if (fontSize == 0 && widthInChars < 12) {
             //System.out.println("Auto: Changing to SMALL Font");
@@ -509,7 +509,7 @@ public class STD extends Canvas {
 
     public static void _print(String string) {
         string += "\n";
-        int heightInPixels = _getHeight();
+        int heightInPixels = _getHeight(0);
         int heightInChars = heightInPixels / G.getFont().getHeight();
         int strlen = string.length();
 
@@ -517,7 +517,7 @@ public class STD extends Canvas {
 
         for (int i = 0; i < strlen; ++i) {
             char ch;
-            if ((ch = string.charAt(i)) == '\n' || xposText + charWidth > _getWidth()) {
+            if ((ch = string.charAt(i)) == '\n' || xposText + charWidth > _getWidth(0)) {
 
                 xposText = 0;
                 yposText += G.getFont().getHeight();
@@ -525,7 +525,7 @@ public class STD extends Canvas {
 
                     nlines = 0;
 
-                    _Blit(0, G.getFont().getHeight(), _getWidth(), heightInPixels - G.getFont().getHeight(), 0, 0);
+                    _Blit(0, G.getFont().getHeight(), _getWidth(0), heightInPixels - G.getFont().getHeight(), 0, 0);
                     yposText -= G.getFont().getHeight();
                     ++nlines;
                 }
@@ -536,7 +536,7 @@ public class STD extends Canvas {
              */
             if (xposText == 0) {
                 G.setColor(0xffffff);
-                G.fillRect(0, yposText, _getWidth(), G.getFont().getHeight());
+                G.fillRect(0, yposText, _getWidth(0), G.getFont().getHeight());
                 G.setColor(0);
             }
 
@@ -635,11 +635,11 @@ public class STD extends Canvas {
         return FW.fw.display.numColors();
     }
 
-    public static int _getHeight() {
+    public static int _getHeight(int i) {
         return T.getHeight();
     }
 
-    public static int _getWidth() {
+    public static int _getWidth(int i) {
         return T.getWidth();
     }
 
