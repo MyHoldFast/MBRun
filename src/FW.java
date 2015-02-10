@@ -15,7 +15,7 @@ public class FW extends MIDlet implements CommandListener
     public static FW fw;
     public Autorun m;
     public boolean threadStarted;
-    public Display display;
+    public static Display display;
     public static int MP;
     public static Form F;
     public static Displayable CD;

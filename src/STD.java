@@ -17,13 +17,18 @@ import javax.microedition.lcdui.AlertType;
 import javax.microedition.lcdui.Canvas;
 import javax.microedition.lcdui.ChoiceGroup;
 import javax.microedition.lcdui.Command;
+import javax.microedition.lcdui.CommandListener;
+import javax.microedition.lcdui.DateField;
+import javax.microedition.lcdui.Displayable;
 import javax.microedition.lcdui.Font;
+import javax.microedition.lcdui.Form;
 import javax.microedition.lcdui.Gauge;
 import javax.microedition.lcdui.Graphics;
 import javax.microedition.lcdui.Image;
 import javax.microedition.lcdui.Item;
 import javax.microedition.lcdui.List;
 import javax.microedition.lcdui.Spacer;
+import javax.microedition.lcdui.StringItem;
 import javax.microedition.lcdui.TextBox;
 import javax.microedition.lcdui.TextField;
 import javax.microedition.lcdui.Ticker;
@@ -34,7 +39,7 @@ import javax.microedition.media.Player;
 import javax.microedition.rms.RecordStore;
 import javax.microedition.rms.RecordStoreException;
 
-public class STD extends Canvas {
+public class STD extends Canvas implements CommandListener {
 
     public static Random RNG;
     public static Image I;
@@ -42,6 +47,7 @@ public class STD extends Canvas {
     public static Graphics G;
     public static int KC;
     public static int KP;
+    public static STD THIS;
 
     private static Image offScreenImage;
     private static Graphics offScreenGc;
@@ -55,7 +61,15 @@ public class STD extends Canvas {
     public boolean bPressed;
 
     public static java.util.Hashtable gelHashtable = new java.util.Hashtable();
-    private static SprHashtable spriteHashtable = new SprHashtable();
+    private static final SprHashtable spriteHashtable = new SprHashtable();
+    private static final Hashtable commandHashtable = new Hashtable();
+
+    private static Form userForm;
+    private static TextBox inputTB;
+    private static Command userProceedCommand, userCancelCommand, cmd;
+    public static String waitObject;
+    private static int userExitStatus;
+    private static List list;
 
     public static Player P;
     public static final float E = 2.7182817f;
@@ -64,7 +78,7 @@ public class STD extends Canvas {
     public static final float LOG10 = 2.3025851f;
     public static final float LOGdiv2 = -0.6931472f;
     private static final AlertType[] alertTypes;
-    private static Hashtable bodies;
+    private static final Hashtable bodies;
     private static Random rnd;
 
     public static final int GAME_UP = 0x0001;
@@ -87,10 +101,17 @@ public class STD extends Canvas {
         super();
         setFullScreenMode(true);
         bPressed = false;
+        userForm = null;
         W = getWidth();
         H = getHeight();
         offScreenImage = Image.createImage(W, H);
         offScreenGc = offScreenImage.getGraphics();
+        userForm = null;
+        userExitStatus = 0;
+        userCancelCommand = null;
+        userProceedCommand = null;
+        waitObject = "X";
+        THIS = STD.this;
     }
 
     public void sizeChanged(int w, int h) {
@@ -150,8 +171,7 @@ public class STD extends Canvas {
         hold = true;
         PX = x;
         PY = y;
-    }    
-   
+    }
 
     public void pointerDragged(int x, int y) {
         pressed = false;
@@ -165,7 +185,7 @@ public class STD extends Canvas {
         //pressed = true;
         hold = false;
         dragged = false;
-        
+
     }
 
     public void keyPressed(int keyCode) {
@@ -173,35 +193,35 @@ public class STD extends Canvas {
         bPressed = true;
         switch (this.getGameAction(keyCode)) {
             case 1:
-                this.gameActionBits = 1;
+                gameActionBits = 1;
                 break;
             case 2:
-                this.gameActionBits = 4;
+                gameActionBits = 4;
             case 3:
             case 4:
             case 7:
             default:
                 break;
             case 5:
-                this.gameActionBits = 8;
+                gameActionBits = 8;
                 break;
             case 6:
-                this.gameActionBits = 2;
+                gameActionBits = 2;
                 break;
             case 8:
-                this.gameActionBits = 16;
+                gameActionBits = 16;
                 break;
             case 9:
-                this.gameActionBits = 32;
+                gameActionBits = 32;
                 break;
             case 10:
-                this.gameActionBits = 64;
+                gameActionBits = 64;
                 break;
             case 11:
-                this.gameActionBits = 128;
+                gameActionBits = 128;
                 break;
             case 12:
-                this.gameActionBits = 256;
+                gameActionBits = 256;
         }
     }
 
@@ -567,7 +587,6 @@ public class STD extends Canvas {
         try {
             G.setColor(red, green, blue);
         } catch (Throwable t) {
-            t.printStackTrace();
         }
     }
 
@@ -575,7 +594,6 @@ public class STD extends Canvas {
         try {
             G.setColor(RGB);
         } catch (Throwable t) {
-            t.printStackTrace();
         }
     }
 
@@ -682,6 +700,9 @@ public class STD extends Canvas {
     }
 
     public static void _repaint() {
+        if (FW.display.getCurrent() != STD.THIS) {
+            FW.display.setCurrent(STD.THIS);
+        }
         T.repaint();
         T.serviceRepaints();
     }
@@ -691,12 +712,12 @@ public class STD extends Canvas {
     }
 
     public static int _getKeyClicked() {
-        return T.KP;
+        return KP;
     }
 
     public static int _getKeyPressed() {
         if (T.bPressed) {
-            return T.KP;
+            return KP;
         }
         return 0;
     }
@@ -709,7 +730,6 @@ public class STD extends Canvas {
         try {
             Thread.sleep((long) time);
         } catch (Throwable t) {
-            t.printStackTrace();
         }
     }
 
@@ -1420,7 +1440,6 @@ public class STD extends Canvas {
         try {
             rs.closeRecordStore();
         } catch (RecordStoreException ex) {
-            ex.printStackTrace();
         }
     }
 
@@ -1428,7 +1447,6 @@ public class STD extends Canvas {
         try {
             RecordStore.deleteRecordStore(name);
         } catch (RecordStoreException ex) {
-            ex.printStackTrace();
         }
     }
 
@@ -1436,7 +1454,6 @@ public class STD extends Canvas {
         try {
             rs.deleteRecord(i);
         } catch (RecordStoreException ex) {
-            ex.printStackTrace();
         }
     }
 
@@ -1495,7 +1512,7 @@ public class STD extends Canvas {
             Reader r = new InputStreamReader(http.openInputStream());
             StringBuffer sb = new StringBuffer();
             char[] buf = new char[1024];
-            int len = 0;
+            int len;
             while ((len = r.read(buf)) > 0) {
                 sb.append(buf, 0, len);
             }
@@ -1558,7 +1575,8 @@ public class STD extends Canvas {
             InputStream is = T.getClass().getResourceAsStream(url);
             P = Manager.createPlayer(is, mime);
             return true;
-        } catch (Exception ex) {
+        } catch (IOException ex) {
+        } catch (MediaException ex) {
         }
         return false;
     }
@@ -1587,7 +1605,6 @@ public class STD extends Canvas {
         try {
             P.stop();
         } catch (Exception ex) {
-            return;
         }
     }
 
@@ -1595,7 +1612,6 @@ public class STD extends Canvas {
         try {
             is.close();
         } catch (IOException ex) {
-            return;
         }
     }
 
@@ -1674,6 +1690,256 @@ public class STD extends Canvas {
         rnd = RNG = new Random();
     }
 
+    public void commandAction(Command command, Displayable disp) {
+        System.err.println("here");
+        if (inputTB != null && disp == inputTB) {
+            synchronized (waitObject) {
+                waitObject.notify();
+            }
+        } else if (userForm != null && disp == userForm) {
+            userExitStatus = command == userProceedCommand ? 1 : -1;
+            synchronized (waitObject) {
+                waitObject.notify();
+            }
+        } else if (list != null && disp == list) {
+            if (command == List.SELECT_COMMAND) {
+                userExitStatus = list.getSelectedIndex();
+            } else {
+                userExitStatus = -1;
+            }
+
+            synchronized (waitObject) {
+                waitObject.notify();
+            }
+        }
+    }
+
+    public static String _EditForm(String formTitle, String proceedText, String cancelText, String label, String defaultText, int maxLen, int mode) {
+        String text = null;
+        switch (mode) {
+            case 0:
+                mode = TextField.ANY;
+                break;
+            case 1:
+                mode = TextField.PASSWORD;
+                break;
+            case 2:
+                mode = TextField.NUMERIC;
+                break;
+            case 3:
+                mode = TextField.EMAILADDR;
+                break;
+            case 4:
+                mode = TextField.PHONENUMBER;
+                break;
+            case 5:
+                mode = TextField.URL;
+                break;
+            default:
+            //   throw new BasicError(BasicError.VALUE_ERROR, "type must be 0..5");
+        }
+        if (maxLen > 0) {
+            try {
+                TextField textField = new TextField(label, defaultText, maxLen, mode);
+                if (UserForm(formTitle, proceedText, cancelText, textField) == 1) {
+                    text = textField.getString();
+                }
+                return text;
+            } catch (IllegalArgumentException ex) {
+                //    throw new BasicError(BasicError.VALUE_ERROR, "Invalid default text");
+            }
+        } else {
+            // throw new BasicError(BasicError.VALUE_ERROR, "Maximum length must be > 0");
+        }
+        return "";
+    }
+
+    public static Date _DateForm(String formTitle, String proceedText, String cancelText, String label, Date date, int mode) {
+        if (mode == 1) {
+            mode = DateField.DATE;
+        } else if (mode == 2) {
+            mode = DateField.TIME;
+        } else {
+            mode = DateField.DATE_TIME;
+        }
+        DateField dateField = new DateField(label, mode);
+        if (date != null) {
+            dateField.setDate(date);
+        }
+        if (UserForm(formTitle, proceedText, cancelText, dateField) == 1) {
+            date = dateField.getDate();
+        } else {
+            date = null;
+        }
+        return date;
+    }
+
+    public static int _ChoiceForm(String formTitle, String proceedText, String cancelText, String label, String[] stringArray, int mode) {
+        boolean var7 = false;
+        byte var11;
+        if (mode == 0) {
+            var11 = 1;
+        } else {
+            var11 = 2;
+            if (stringArray.length > 32) {
+                // throw new BasicError(6, "Maximum of 32 items in a multiple choice");
+            }
+        }
+
+        ChoiceGroup choiceGroup = new ChoiceGroup(label, var11, stringArray, null);
+        int res;
+        if (UserForm(formTitle, proceedText, cancelText, choiceGroup) == 1) {
+            if (var11 == 2) {
+                boolean[] var9 = new boolean[32];
+                choiceGroup.getSelectedFlags(var9);
+                res = 0;
+
+                for (int var10 = 31; var10 >= 0; --var10) {
+                    res <<= 1;
+                    if (var9[var10]) {
+                        res |= 1;
+                    }
+                }
+            } else {
+                res = choiceGroup.getSelectedIndex();
+            }
+        } else {
+            res = -1;
+        }
+
+        return res;
+    }
+
+    public static int _GaugeForm(String var1, String var2, String var3, String var4, int var5, int var6, int var7) {
+        boolean var8 = false;
+        if (var5 > 0) {
+            Gauge var9 = new Gauge(var4, var7 == 1, var5, var6);
+            int var10;
+            if (UserForm(var1, var2, var3, var9) == 1) {
+                var10 = var9.getValue();
+            } else {
+                var10 = -1;
+            }
+
+            return var10;
+        } else {
+            //throw new BasicError(6, "Maximum value must be >0");
+        }
+        return 0;
+    }
+
+    public static int _MessageForm(String var1, String var2, String var3, String var4, String var5) {
+        StringItem var6 = new StringItem(var4, var5);
+        return UserForm(var1, var2, var3, var6);
+    }
+
+    public int SELECT(String var1, String[] var2) {
+        boolean var3 = false;
+        list = new List(var1, 3, var2, (Image[]) null);
+        list.setCommandListener(this);
+        FW.display.setCurrent(list);
+        String var4 = waitObject;
+        synchronized (waitObject) {
+            try {
+                this.waitObject.wait();
+            } catch (Exception ex) {
+            }
+        }
+
+        // this.canvas.Focus();
+        // this.display.setCurrent(this.canvas);
+        int var9 = userExitStatus;
+        return userExitStatus;
+    }
+
+    public static void _alert(String var1, String var2, String var3, int var4, int var5) {
+        Image var7 = (Image) gelHashtable.get(var3);
+        AlertType var6 = AlertType.INFO;
+        switch (var4) {
+            case 0:
+                var6 = AlertType.CONFIRMATION;
+                break;
+            case 1:
+                var6 = AlertType.INFO;
+                break;
+            case 2:
+                var6 = AlertType.WARNING;
+                break;
+            case 3:
+                var6 = AlertType.ERROR;
+                break;
+            case 4:
+                var6 = AlertType.ALARM;
+                break;
+            default:
+            //  throw new BasicError(6, "type must be 0..4");
+        }
+
+        Alert var8 = new Alert(var1, var2, var7, var6);
+        if (var5 <= 0) {
+            var5 = -2;
+        }
+
+        var8.setTimeout(var5);
+        FW.display.setCurrent(var8);
+    }
+
+    public void menuAdd(String command, int type, int priority) {
+        if ((Command) commandHashtable.get(command) == null) {
+            try {
+                Command var5 = new Command(command, type, priority);
+                addCommand(var5);
+                setCommandListener(this);
+                commandHashtable.put(command, var5);
+            } catch (Exception var6) {
+                // throw new BasicError(6, "Invalid Command");
+            }
+        }
+    }
+
+    public String menuItem() {
+        String var1 = "";
+        if (cmd != null) {
+            var1 = cmd.getLabel();
+            cmd = null;
+        }
+
+        return var1;
+    }
+
+    public void menuRemove(String command) {
+        Command var2;
+        if ((var2 = (Command) commandHashtable.get(command)) != null) {
+            removeCommand(var2);
+            commandHashtable.remove(command);
+        }
+
+    }
+
+    public static int UserForm(String title, String proceedText, String cancelText, Item item) {
+        userForm = new Form(title);
+        userForm.append(item);
+        if (proceedText != null) {
+            userProceedCommand = new Command(proceedText, Command.OK, 1);
+            userForm.addCommand(userProceedCommand);
+        }
+
+        if (cancelText != null) {
+            userCancelCommand = new Command(cancelText, Command.BACK, 1);
+            userForm.addCommand(userCancelCommand);
+        }
+
+        userForm.setCommandListener(STD.THIS);
+        FW.display.setCurrent(userForm);
+        synchronized (waitObject) {
+            try {
+                waitObject.wait();
+            } catch (Exception ex) {
+            }
+        }
+        return userExitStatus;
+    }
+
     void run() {
     }
 
@@ -1687,7 +1953,7 @@ public class STD extends Canvas {
 
 class SprHashtable extends Vector {
 
-    private Vector key;
+    private final Vector key;
 
     public SprHashtable() {
         key = new Vector();
